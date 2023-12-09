@@ -5,10 +5,8 @@
 #include <Eigen/Core>
 #include <Eigen/Dense>
 #include <Eigen/StdVector>
-#include <execution>
 #include <openssl/md5.h>
 #include <pcl/common/io.h>
-#include <rosbag/bag.h>
 #include <stdio.h>
 #include <string>
 #include <unordered_map>

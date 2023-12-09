@@ -131,21 +131,25 @@ geometry_msgs::PoseStamped msg_body_pose;
 
 shared_ptr<Preprocess> p_pre(new Preprocess());
 
-void SigHandle(int sig) {
+void SigHandle(int sig)
+{
   flg_exit = true;
   ROS_WARN("catch sig %d", sig);
   sig_buffer.notify_all();
 }
 
-const bool intensity_contrast(PointType &x, PointType &y) {
+const bool intensity_contrast(PointType &x, PointType &y)
+{
   return (x.intensity > y.intensity);
 };
 
-const bool var_contrast(pointWithCov &x, pointWithCov &y) {
+const bool var_contrast(pointWithCov &x, pointWithCov &y)
+{
   return (x.cov.diagonal().norm() < y.cov.diagonal().norm());
 };
 
-inline void dump_lio_state_to_log(FILE *fp) {
+inline void dump_lio_state_to_log(FILE *fp)
+{
   V3D rot_ang(Log(state.rot_end));
   fprintf(fp, "%lf ", Measures.lidar_beg_time - first_lidar_time);
   fprintf(fp, "%lf %lf %lf ", rot_ang(0), rot_ang(1), rot_ang(2)); // Angle
@@ -158,20 +162,22 @@ inline void dump_lio_state_to_log(FILE *fp) {
   fprintf(fp, "%lf %lf %lf %lf ", scan_match_time, solve_time,
           map_incremental_time,
           total_time); // scan match, ekf, map incre, total
-  fprintf(fp, "%d %d %d", feats_undistort->points.size(),
+  fprintf(fp, "%lu %lu %d", feats_undistort->points.size(),
           feats_down_body->points.size(),
           effct_feat_num); // raw point number, effect number
   fprintf(fp, "\r\n");
   fflush(fp);
 }
 
-inline void kitti_log(FILE *fp) {
+inline void kitti_log(FILE *fp)
+{
   Eigen::Matrix4d T_lidar_to_cam;
   T_lidar_to_cam << 0.00042768, -0.999967, -0.0080845, -0.01198, -0.00721062,
       0.0080811998, -0.99994131, -0.0540398, 0.999973864, 0.00048594,
       -0.0072069, -0.292196, 0, 0, 0, 1.0;
   V3D rot_ang(Log(state.rot_end));
-  MD(4, 4) T;
+  MD(4, 4)
+  T;
   T.block<3, 3>(0, 0) = state.rot_end;
   T.block<3, 1>(0, 3) = state.pos_end;
   T(3, 0) = 0;
@@ -179,7 +185,8 @@ inline void kitti_log(FILE *fp) {
   T(3, 2) = 0;
   T(3, 3) = 1;
   T = T_lidar_to_cam * T * T_lidar_to_cam.inverse();
-  for (int i = 0; i < 3; i++) {
+  for (int i = 0; i < 3; i++)
+  {
     if (i == 2)
       fprintf(fp, "%lf %lf %lf %lf", T(i, 0), T(i, 1), T(i, 2), T(i, 3));
     else
@@ -193,7 +200,8 @@ inline void kitti_log(FILE *fp) {
 }
 
 // project the lidar scan to world frame
-void pointBodyToWorld(PointType const *const pi, PointType *const po) {
+void pointBodyToWorld(PointType const *const pi, PointType *const po)
+{
   V3D p_body(pi->x, pi->y, pi->z);
   p_body = p_body + Lidar_offset_to_IMU;
   V3D p_global(state.rot_end * (p_body) + state.pos_end);
@@ -204,7 +212,8 @@ void pointBodyToWorld(PointType const *const pi, PointType *const po) {
 }
 
 template <typename T>
-void pointBodyToWorld(const Matrix<T, 3, 1> &pi, Matrix<T, 3, 1> &po) {
+void pointBodyToWorld(const Matrix<T, 3, 1> &pi, Matrix<T, 3, 1> &po)
+{
   V3D p_body(pi[0], pi[1], pi[2]);
   p_body = p_body + Lidar_offset_to_IMU;
   V3D p_global(state.rot_end * (p_body) + state.pos_end);
@@ -213,7 +222,8 @@ void pointBodyToWorld(const Matrix<T, 3, 1> &pi, Matrix<T, 3, 1> &po) {
   po[2] = p_global(2);
 }
 
-void RGBpointBodyToWorld(PointType const *const pi, PointType *const po) {
+void RGBpointBodyToWorld(PointType const *const pi, PointType *const po)
+{
   V3D p_body(pi->x, pi->y, pi->z);
   V3D p_global(state.rot_end * (p_body) + state.pos_end);
   po->x = p_global(0);
@@ -230,10 +240,12 @@ void RGBpointBodyToWorld(PointType const *const pi, PointType *const po) {
   int reflection_map = intensity * 10000;
 }
 
-void standard_pcl_cbk(const sensor_msgs::PointCloud2::ConstPtr &msg) {
+void standard_pcl_cbk(const sensor_msgs::PointCloud2::ConstPtr &msg)
+{
   mtx_buffer.lock();
   // cout<<"got feature"<<endl;
-  if (msg->header.stamp.toSec() < last_timestamp_lidar) {
+  if (msg->header.stamp.toSec() < last_timestamp_lidar)
+  {
     ROS_ERROR("lidar loop back, clear buffer");
     lidar_buffer.clear();
   }
@@ -248,10 +260,12 @@ void standard_pcl_cbk(const sensor_msgs::PointCloud2::ConstPtr &msg) {
   sig_buffer.notify_all();
 }
 
-void livox_pcl_cbk(const livox_ros_driver::CustomMsg::ConstPtr &msg) {
+void livox_pcl_cbk(const livox_ros_driver::CustomMsg::ConstPtr &msg)
+{
   mtx_buffer.lock();
   // cout << "got feature" << endl;
-  if (msg->header.stamp.toSec() < last_timestamp_lidar) {
+  if (msg->header.stamp.toSec() < last_timestamp_lidar)
+  {
     ROS_ERROR("lidar loop back, clear buffer");
     lidar_buffer.clear();
   }
@@ -266,7 +280,8 @@ void livox_pcl_cbk(const livox_ros_driver::CustomMsg::ConstPtr &msg) {
   sig_buffer.notify_all();
 }
 
-void imu_cbk(const sensor_msgs::Imu::ConstPtr &msg_in) {
+void imu_cbk(const sensor_msgs::Imu::ConstPtr &msg_in)
+{
   publish_count++;
   sensor_msgs::Imu::Ptr msg(new sensor_msgs::Imu(*msg_in));
 
@@ -274,7 +289,8 @@ void imu_cbk(const sensor_msgs::Imu::ConstPtr &msg_in) {
 
   mtx_buffer.lock();
 
-  if (timestamp < last_timestamp_imu) {
+  if (timestamp < last_timestamp_imu)
+  {
     ROS_ERROR("imu loop back, clear buffer");
     imu_buffer.clear();
     flg_reset = true;
@@ -289,9 +305,12 @@ void imu_cbk(const sensor_msgs::Imu::ConstPtr &msg_in) {
   sig_buffer.notify_all();
 }
 
-bool sync_packages(MeasureGroup &meas) {
-  if (!imu_en) {
-    if (!lidar_buffer.empty()) {
+bool sync_packages(MeasureGroup &meas)
+{
+  if (!imu_en)
+  {
+    if (!lidar_buffer.empty())
+    {
       // cout<<"meas.lidar->points.size(): "<<meas.lidar->points.size()<<endl;
       meas.lidar = lidar_buffer.front();
       meas.lidar_beg_time = time_buffer.front();
@@ -303,14 +322,17 @@ bool sync_packages(MeasureGroup &meas) {
     return false;
   }
 
-  if (lidar_buffer.empty() || imu_buffer.empty()) {
+  if (lidar_buffer.empty() || imu_buffer.empty())
+  {
     return false;
   }
 
   /*** push a lidar scan ***/
-  if (!lidar_pushed) {
+  if (!lidar_pushed)
+  {
     meas.lidar = lidar_buffer.front();
-    if (meas.lidar->points.size() <= 1) {
+    if (meas.lidar->points.size() <= 1)
+    {
       lidar_buffer.pop_front();
       return false;
     }
@@ -320,14 +342,16 @@ bool sync_packages(MeasureGroup &meas) {
     lidar_pushed = true;
   }
 
-  if (last_timestamp_imu < lidar_end_time) {
+  if (last_timestamp_imu < lidar_end_time)
+  {
     return false;
   }
 
   /*** push imu data, and pop from imu buffer ***/
   double imu_time = imu_buffer.front()->header.stamp.toSec();
   meas.imu.clear();
-  while ((!imu_buffer.empty()) && (imu_time < lidar_end_time)) {
+  while ((!imu_buffer.empty()) && (imu_time < lidar_end_time))
+  {
     imu_time = imu_buffer.front()->header.stamp.toSec();
     if (imu_time > lidar_end_time + 0.02)
       break;
@@ -342,17 +366,20 @@ bool sync_packages(MeasureGroup &meas) {
 }
 
 void publish_frame_world(const ros::Publisher &pubLaserCloudFullRes,
-                         const int point_skip) {
+                         const int point_skip)
+{
   PointCloudXYZI::Ptr laserCloudFullRes(dense_map_en ? feats_undistort
                                                      : feats_down_body);
   int size = laserCloudFullRes->points.size();
   PointCloudXYZI::Ptr laserCloudWorld(new PointCloudXYZI(size, 1));
-  for (int i = 0; i < size; i++) {
+  for (int i = 0; i < size; i++)
+  {
     RGBpointBodyToWorld(&laserCloudFullRes->points[i],
                         &laserCloudWorld->points[i]);
   }
   PointCloudXYZI::Ptr laserCloudWorldPub(new PointCloudXYZI);
-  for (int i = 0; i < size; i += point_skip) {
+  for (int i = 0; i < size; i += point_skip)
+  {
     laserCloudWorldPub->points.push_back(laserCloudWorld->points[i]);
   }
   sensor_msgs::PointCloud2 laserCloudmsg;
@@ -365,7 +392,8 @@ void publish_frame_world(const ros::Publisher &pubLaserCloudFullRes,
 
 void publish_effect_world(const ros::Publisher &pubLaserCloudEffect,
                           const ros::Publisher &pubPointWithCov,
-                          const std::vector<ptpl> &ptpl_list) {
+                          const std::vector<ptpl> &ptpl_list)
+{
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr effect_cloud_world(
       new pcl::PointCloud<pcl::PointXYZRGB>);
   PointCloudXYZI::Ptr laserCloudWorld(new PointCloudXYZI(effct_feat_num, 1));
@@ -381,7 +409,8 @@ void publish_effect_world(const ros::Publisher &pubLaserCloudEffect,
   m_line.scale.x = 0.01;
   m_line.pose.orientation.w = 1.0;
   m_line.header.frame_id = "camera_init";
-  for (int i = 0; i < ptpl_list.size(); i++) {
+  for (int i = 0; i < ptpl_list.size(); i++)
+  {
     Eigen::Vector3d p_c = ptpl_list[i].point;
     Eigen::Vector3d p_w = state.rot_end * (p_c) + state.pos_end;
     pcl::PointXYZRGB pi;
@@ -410,7 +439,8 @@ void publish_effect_world(const ros::Publisher &pubLaserCloudEffect,
     m_line.id++;
   }
   int max_num = 20000;
-  for (int i = ptpl_list.size(); i < max_num; i++) {
+  for (int i = ptpl_list.size(); i < max_num; i++)
+  {
     m_line.color.a = 0;
     ma_line.markers.push_back(m_line);
     m_line.id++;
@@ -425,7 +455,8 @@ void publish_effect_world(const ros::Publisher &pubLaserCloudEffect,
   pubLaserCloudEffect.publish(laserCloudFullRes3);
 }
 
-void publish_no_effect(const ros::Publisher &pubLaserCloudNoEffect) {
+void publish_no_effect(const ros::Publisher &pubLaserCloudNoEffect)
+{
   sensor_msgs::PointCloud2 laserCloudFullRes3;
   pcl::toROSMsg(*laserCloudNoeffect, laserCloudFullRes3);
   laserCloudFullRes3.header.stamp =
@@ -434,11 +465,13 @@ void publish_no_effect(const ros::Publisher &pubLaserCloudNoEffect) {
   pubLaserCloudNoEffect.publish(laserCloudFullRes3);
 }
 
-void publish_effect(const ros::Publisher &pubLaserCloudEffect) {
+void publish_effect(const ros::Publisher &pubLaserCloudEffect)
+{
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr effect_cloud_world(
       new pcl::PointCloud<pcl::PointXYZRGB>);
   PointCloudXYZI::Ptr laserCloudWorld(new PointCloudXYZI(effct_feat_num, 1));
-  for (int i = 0; i < effct_feat_num; i++) {
+  for (int i = 0; i < effct_feat_num; i++)
+  {
     RGBpointBodyToWorld(&laserCloudOri->points[i], &laserCloudWorld->points[i]);
     pcl::PointXYZRGB pi;
     pi.x = laserCloudWorld->points[i].x;
@@ -462,7 +495,9 @@ void publish_effect(const ros::Publisher &pubLaserCloudEffect) {
   pubLaserCloudEffect.publish(laserCloudFullRes3);
 }
 
-template <typename T> void set_posestamp(T &out) {
+template <typename T>
+void set_posestamp(T &out)
+{
   out.position.x = state.pos_end(0);
   out.position.y = state.pos_end(1);
   out.position.z = state.pos_end(2);
@@ -472,7 +507,8 @@ template <typename T> void set_posestamp(T &out) {
   out.orientation.w = geoQuat.w;
 }
 
-void publish_odometry(const ros::Publisher &pubOdomAftMapped) {
+void publish_odometry(const ros::Publisher &pubOdomAftMapped)
+{
   odomAftMapped.header.frame_id = "camera_init";
   odomAftMapped.child_frame_id = "aft_mapped";
   odomAftMapped.header.stamp =
@@ -493,14 +529,16 @@ void publish_odometry(const ros::Publisher &pubOdomAftMapped) {
   pubOdomAftMapped.publish(odomAftMapped);
 }
 
-void publish_mavros(const ros::Publisher &mavros_pose_publisher) {
+void publish_mavros(const ros::Publisher &mavros_pose_publisher)
+{
   msg_body_pose.header.stamp = ros::Time::now();
   msg_body_pose.header.frame_id = "camera_odom_frame";
   set_posestamp(msg_body_pose.pose);
   mavros_pose_publisher.publish(msg_body_pose);
 }
 
-void publish_path(const ros::Publisher pubPath) {
+void publish_path(const ros::Publisher pubPath)
+{
   set_posestamp(msg_body_pose.pose);
   msg_body_pose.header.stamp = ros::Time::now();
   msg_body_pose.header.frame_id = "camera_init";
@@ -508,7 +546,8 @@ void publish_path(const ros::Publisher pubPath) {
   pubPath.publish(path);
 }
 
-int main(int argc, char **argv) {
+int main(int argc, char **argv)
+{
   ros::init(argc, argv, "voxelMapping");
   ros::NodeHandle nh;
 
@@ -559,10 +598,11 @@ int main(int argc, char **argv) {
   nh.param<bool>("visualization/dense_map_enable", dense_map_en, false);
 
   // result params
-  nh.param<bool>("Result/write_kitti_log", write_kitti_log, 'false');
+  nh.param<bool>("Result/write_kitti_log", write_kitti_log, false);
   nh.param<string>("Result/result_path", result_path, "");
   cout << "p_pre->lidar_type " << p_pre->lidar_type << endl;
-  for (int i = 0; i < layer_point_size.size(); i++) {
+  for (int i = 0; i < layer_point_size.size(); i++)
+  {
     layer_size.push_back(layer_point_size[i]);
   }
 
@@ -571,7 +611,8 @@ int main(int argc, char **argv) {
           ? nh.subscribe(lid_topic, 200000, livox_pcl_cbk)
           : nh.subscribe(lid_topic, 200000, standard_pcl_cbk);
   ros::Subscriber sub_imu;
-  if (imu_en) {
+  if (imu_en)
+  {
     sub_imu = nh.subscribe(imu_topic, 200000, imu_cbk);
   }
 
@@ -589,8 +630,10 @@ int main(int argc, char **argv) {
   path.header.frame_id = "camera_init";
 
   /*** variables definition ***/
-  VD(DIM_STATE) solution;
-  MD(DIM_STATE, DIM_STATE) G, H_T_H, I_STATE;
+  VD(DIM_STATE)
+  solution;
+  MD(DIM_STATE, DIM_STATE)
+  G, H_T_H, I_STATE;
   V3D rot_add, t_add;
   StatesGroup state_propagat;
   PointType pointOri, pointSel, coeff;
@@ -612,9 +655,12 @@ int main(int argc, char **argv) {
   p_imu->set_extrinsic(extT, extR);
 
   // Current version do not support imu.
-  if (imu_en) {
+  if (imu_en)
+  {
     std::cout << "use imu" << std::endl;
-  } else {
+  }
+  else
+  {
     std::cout << "no imu" << std::endl;
   }
 
@@ -630,7 +676,8 @@ int main(int argc, char **argv) {
   /*** debug record ***/
   FILE *fp_kitti;
 
-  if (write_kitti_log) {
+  if (write_kitti_log)
+  {
     fp_kitti = fopen(result_path.c_str(), "w");
   }
 
@@ -643,13 +690,16 @@ int main(int argc, char **argv) {
   std::unordered_map<VOXEL_LOC, OctoTree *> voxel_map;
   last_rot << 1, 0, 0, 0, 1, 0, 0, 0, 1;
 
-  while (status) {
+  while (status)
+  {
     if (flg_exit)
       break;
     ros::spinOnce();
-    if (sync_packages(Measures)) {
+    if (sync_packages(Measures))
+    {
       // std::cout << "sync once" << std::endl;
-      if (flg_reset) {
+      if (flg_reset)
+      {
         ROS_WARN("reset when rosbag play back");
         p_imu->Reset();
         flg_reset = false;
@@ -672,9 +722,11 @@ int main(int argc, char **argv) {
               undistort_end - undistort_start)
               .count() *
           1000;
-      if (calib_laser) {
+      if (calib_laser)
+      {
         // calib the vertical angle for kitti dataset
-        for (size_t i = 0; i < feats_undistort->size(); i++) {
+        for (size_t i = 0; i < feats_undistort->size(); i++)
+        {
           PointType pi = feats_undistort->points[i];
           double range = sqrt(pi.x * pi.x + pi.y * pi.y + pi.z * pi.z);
           double calib_vertical_angle = deg2rad(0.15);
@@ -689,12 +741,14 @@ int main(int argc, char **argv) {
       }
       state_propagat = state;
 
-      if (is_first_frame) {
+      if (is_first_frame)
+      {
         first_lidar_time = Measures.lidar_beg_time;
         is_first_frame = false;
       }
 
-      if (feats_undistort->empty() || (feats_undistort == NULL)) {
+      if (feats_undistort->empty() || (feats_undistort == NULL))
+      {
         p_imu->first_lidar_time = first_lidar_time;
         cout << "FAST-LIO not ready" << endl;
         continue;
@@ -703,13 +757,15 @@ int main(int argc, char **argv) {
       flg_EKF_inited = (Measures.lidar_beg_time - first_lidar_time) < INIT_TIME
                            ? false
                            : true;
-      if (flg_EKF_inited && !init_map) {
+      if (flg_EKF_inited && !init_map)
+      {
         pcl::PointCloud<pcl::PointXYZI>::Ptr world_lidar(
             new pcl::PointCloud<pcl::PointXYZI>);
         Eigen::Quaterniond q(state.rot_end);
         transformLidar(state, p_imu, feats_undistort, world_lidar);
         std::vector<pointWithCov> pv_list;
-        for (size_t i = 0; i < world_lidar->size(); i++) {
+        for (size_t i = 0; i < world_lidar->size(); i++)
+        {
           pointWithCov pv;
           pv.point << world_lidar->points[i].x, world_lidar->points[i].y,
               world_lidar->points[i].z;
@@ -717,7 +773,8 @@ int main(int argc, char **argv) {
                          feats_undistort->points[i].y,
                          feats_undistort->points[i].z);
           // if z=0, error will occur in calcBodyCov. To be solved
-          if (point_this[2] == 0) {
+          if (point_this[2] == 0)
+          {
             point_this[2] = 0.001;
           }
           M3D cov;
@@ -742,12 +799,14 @@ int main(int argc, char **argv) {
                       max_points_size, max_points_size, min_eigen_value,
                       voxel_map);
         std::cout << "build voxel map" << std::endl;
-        if (write_kitti_log) {
+        if (write_kitti_log)
+        {
           kitti_log(fp_kitti);
         }
 
         scanIdx++;
-        if (publish_voxel_map) {
+        if (publish_voxel_map)
+        {
           pubVoxelMap(voxel_map, publish_max_voxel_layer, voxel_map_pub);
         }
         init_map = true;
@@ -781,11 +840,13 @@ int main(int argc, char **argv) {
 
       /*** iterated state estimation ***/
       auto calc_point_cov_start = std::chrono::high_resolution_clock::now();
-      for (size_t i = 0; i < feats_down_body->size(); i++) {
+      for (size_t i = 0; i < feats_down_body->size(); i++)
+      {
         V3D point_this(feats_down_body->points[i].x,
                        feats_down_body->points[i].y,
                        feats_down_body->points[i].z);
-        if (point_this[2] == 0) {
+        if (point_this[2] == 0)
+        {
           point_this[2] = 0.001;
         }
         M3D cov;
@@ -804,7 +865,8 @@ int main(int argc, char **argv) {
               .count() *
           1000;
 
-      for (iterCount = 0; iterCount < NUM_MAX_ITERATIONS; iterCount++) {
+      for (iterCount = 0; iterCount < NUM_MAX_ITERATIONS; iterCount++)
+      {
         laserCloudOri->clear();
         laserCloudNoeffect->clear();
         corr_normvect->clear();
@@ -819,7 +881,8 @@ int main(int argc, char **argv) {
         pcl::PointCloud<pcl::PointXYZI>::Ptr world_lidar(
             new pcl::PointCloud<pcl::PointXYZI>);
         transformLidar(state, p_imu, feats_down_body, world_lidar);
-        for (size_t i = 0; i < feats_down_body->size(); i++) {
+        for (size_t i = 0; i < feats_down_body->size(); i++)
+        {
           pointWithCov pv;
           pv.point << feats_down_body->points[i].x,
               feats_down_body->points[i].y, feats_down_body->points[i].z;
@@ -844,7 +907,8 @@ int main(int argc, char **argv) {
         auto scan_match_time_end = std::chrono::high_resolution_clock::now();
 
         effct_feat_num = 0;
-        for (int i = 0; i < ptpl_list.size(); i++) {
+        for (int i = 0; i < ptpl_list.size(); i++)
+        {
           PointType pi_body;
           PointType pi_world;
           PointType pl;
@@ -888,13 +952,17 @@ int main(int argc, char **argv) {
         VectorXd R_inv(effct_feat_num);
         VectorXd meas_vec(effct_feat_num);
 
-        for (int i = 0; i < effct_feat_num; i++) {
+        for (int i = 0; i < effct_feat_num; i++)
+        {
           const PointType &laser_p = laserCloudOri->points[i];
           V3D point_this(laser_p.x, laser_p.y, laser_p.z);
           M3D cov;
-          if (calib_laser) {
+          if (calib_laser)
+          {
             calcBodyCov(point_this, ranging_cov, CALIB_ANGLE_COV, cov);
-          } else {
+          }
+          else
+          {
             calcBodyCov(point_this, ranging_cov, angle_cov, cov);
           }
 
@@ -935,7 +1003,8 @@ int main(int argc, char **argv) {
         flg_EKF_converged = false;
 
         /*** Iterative Kalman Filter Update ***/
-        if (!flg_EKF_inited) {
+        if (!flg_EKF_inited)
+        {
           cout << "||||||||||Initiallizing LiDar||||||||||" << endl;
           /*** only run in initialization period ***/
           MatrixXd H_init(MD(9, DIM_STATE)::Zero());
@@ -955,7 +1024,9 @@ int main(int argc, char **argv) {
 
           state.resetpose();
           EKF_stop_flg = true;
-        } else {
+        }
+        else
+        {
           auto &&Hsub_T = Hsub.transpose();
           H_T_H.block<6, 6>(0, 0) = Hsub_T_R_inv * Hsub;
           MD(DIM_STATE, DIM_STATE) &&K_1 =
@@ -967,7 +1038,8 @@ int main(int argc, char **argv) {
           int minRow, minCol;
           if (0) // if(V.minCoeff(&minRow, &minCol) < 1.0f)
           {
-            VD(6) V = H_T_H.block<6, 6>(0, 0).eigenvalues().real();
+            VD(6)
+            V = H_T_H.block<6, 6>(0, 0).eigenvalues().real();
             cout << "!!!!!! Degeneration Happend, eigen values: "
                  << V.transpose() << endl;
             EKF_stop_flg = true;
@@ -979,7 +1051,8 @@ int main(int argc, char **argv) {
           rot_add = solution.block<3, 1>(0, 0);
           t_add = solution.block<3, 1>(3, 0);
 
-          if ((rot_add.norm() * 57.3 < 0.01) && (t_add.norm() * 100 < 0.015)) {
+          if ((rot_add.norm() * 57.3 < 0.01) && (t_add.norm() * 100 < 0.015))
+          {
             flg_EKF_converged = true;
           }
 
@@ -990,15 +1063,18 @@ int main(int argc, char **argv) {
         /*** Rematch Judgement ***/
         nearest_search_en = false;
         if (flg_EKF_converged ||
-            ((rematch_num == 0) && (iterCount == (NUM_MAX_ITERATIONS - 2)))) {
+            ((rematch_num == 0) && (iterCount == (NUM_MAX_ITERATIONS - 2))))
+        {
           nearest_search_en = true;
           rematch_num++;
         }
 
         /*** Convergence Judgements and Covariance Update ***/
         if (!EKF_stop_flg &&
-            (rematch_num >= 2 || (iterCount == NUM_MAX_ITERATIONS - 1))) {
-          if (flg_EKF_inited) {
+            (rematch_num >= 2 || (iterCount == NUM_MAX_ITERATIONS - 1)))
+        {
+          if (flg_EKF_inited)
+          {
             /*** Covariance Update ***/
             G.setZero();
             G.block<DIM_STATE, 6>(0, 0) = K * Hsub;
@@ -1009,8 +1085,10 @@ int main(int argc, char **argv) {
             geoQuat = tf::createQuaternionMsgFromRollPitchYaw(
                 euler_cur(0), euler_cur(1), euler_cur(2));
 
-            VD(DIM_STATE) K_sum = K.rowwise().sum();
-            VD(DIM_STATE) P_diag = state.cov.diagonal();
+            VD(DIM_STATE)
+            K_sum = K.rowwise().sum();
+            VD(DIM_STATE)
+            P_diag = state.cov.diagonal();
           }
           EKF_stop_flg = true;
         }
@@ -1030,7 +1108,8 @@ int main(int argc, char **argv) {
           new pcl::PointCloud<pcl::PointXYZI>);
       transformLidar(state, p_imu, feats_down_body, world_lidar);
       std::vector<pointWithCov> pv_list;
-      for (size_t i = 0; i < world_lidar->size(); i++) {
+      for (size_t i = 0; i < world_lidar->size(); i++)
+      {
         pointWithCov pv;
         pv.point << world_lidar->points[i].x, world_lidar->points[i].y,
             world_lidar->points[i].z;
@@ -1074,11 +1153,13 @@ int main(int argc, char **argv) {
       pub_cloud.header.stamp =
           ros::Time::now(); //.fromSec(last_timestamp_lidar);
       pub_cloud.header.frame_id = "camera_init";
-      if (publish_point_cloud) {
+      if (publish_point_cloud)
+      {
         publish_frame_world(pubLaserCloudFullRes, pub_point_cloud_skip);
       }
 
-      if (publish_voxel_map) {
+      if (publish_voxel_map)
+      {
         pubVoxelMap(voxel_map, publish_max_voxel_layer, voxel_map_pub);
       }
 
@@ -1127,7 +1208,8 @@ int main(int argc, char **argv) {
       cout << "[ Time ]: "
            << " average total " << aver_time_consu << endl;
 
-      if (write_kitti_log) {
+      if (write_kitti_log)
+      {
         kitti_log(fp_kitti);
       }
 
