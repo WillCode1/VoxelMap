@@ -138,36 +138,10 @@ void SigHandle(int sig)
   sig_buffer.notify_all();
 }
 
-const bool intensity_contrast(PointType &x, PointType &y)
-{
-  return (x.intensity > y.intensity);
-};
-
 const bool var_contrast(pointWithCov &x, pointWithCov &y)
 {
   return (x.cov.diagonal().norm() < y.cov.diagonal().norm());
 };
-
-inline void dump_lio_state_to_log(FILE *fp)
-{
-  V3D rot_ang(Log(state.rot_end));
-  fprintf(fp, "%lf ", Measures.lidar_beg_time - first_lidar_time);
-  fprintf(fp, "%lf %lf %lf ", rot_ang(0), rot_ang(1), rot_ang(2)); // Angle
-  fprintf(fp, "%lf %lf %lf ", state.pos_end(0), state.pos_end(1),
-          state.pos_end(2)); // Pos
-  fprintf(fp, "%lf %lf %lf ", state.vel_end(0), state.vel_end(1),
-          state.vel_end(2)); // Vel
-  fprintf(fp, "%lf %lf %lf ", state.bias_g(0), state.bias_g(1),
-          state.bias_g(2)); // omega
-  fprintf(fp, "%lf %lf %lf %lf ", scan_match_time, solve_time,
-          map_incremental_time,
-          total_time); // scan match, ekf, map incre, total
-  fprintf(fp, "%lu %lu %d", feats_undistort->points.size(),
-          feats_down_body->points.size(),
-          effct_feat_num); // raw point number, effect number
-  fprintf(fp, "\r\n");
-  fflush(fp);
-}
 
 inline void kitti_log(FILE *fp)
 {
@@ -390,81 +364,6 @@ void publish_frame_world(const ros::Publisher &pubLaserCloudFullRes,
   pubLaserCloudFullRes.publish(laserCloudmsg);
 }
 
-void publish_effect_world(const ros::Publisher &pubLaserCloudEffect,
-                          const ros::Publisher &pubPointWithCov,
-                          const std::vector<ptpl> &ptpl_list)
-{
-  pcl::PointCloud<pcl::PointXYZRGB>::Ptr effect_cloud_world(
-      new pcl::PointCloud<pcl::PointXYZRGB>);
-  PointCloudXYZI::Ptr laserCloudWorld(new PointCloudXYZI(effct_feat_num, 1));
-  visualization_msgs::MarkerArray ma_line;
-  visualization_msgs::Marker m_line;
-  m_line.type = visualization_msgs::Marker::LINE_LIST;
-  m_line.action = visualization_msgs::Marker::ADD;
-  m_line.ns = "lines";
-  m_line.color.a = 0.5; // Don't forget to set the alpha!
-  m_line.color.r = 1.0;
-  m_line.color.g = 1.0;
-  m_line.color.b = 1.0;
-  m_line.scale.x = 0.01;
-  m_line.pose.orientation.w = 1.0;
-  m_line.header.frame_id = "camera_init";
-  for (int i = 0; i < ptpl_list.size(); i++)
-  {
-    Eigen::Vector3d p_c = ptpl_list[i].point;
-    Eigen::Vector3d p_w = state.rot_end * (p_c) + state.pos_end;
-    pcl::PointXYZRGB pi;
-    pi.x = p_w[0];
-    pi.y = p_w[1];
-    pi.z = p_w[2];
-    // float v = laserCloudWorld->points[i].intensity / 200;
-    // v = 1.0 - v;
-    // uint8_t r, g, b;
-    // mapJet(v, 0, 1, r, g, b);
-    // pi.r = r;
-    // pi.g = g;
-    // pi.b = b;
-    effect_cloud_world->points.push_back(pi);
-    m_line.points.clear();
-    geometry_msgs::Point p;
-    p.x = p_w[0];
-    p.y = p_w[1];
-    p.z = p_w[2];
-    m_line.points.push_back(p);
-    p.x = ptpl_list[i].center(0);
-    p.y = ptpl_list[i].center(1);
-    p.z = ptpl_list[i].center(2);
-    m_line.points.push_back(p);
-    ma_line.markers.push_back(m_line);
-    m_line.id++;
-  }
-  int max_num = 20000;
-  for (int i = ptpl_list.size(); i < max_num; i++)
-  {
-    m_line.color.a = 0;
-    ma_line.markers.push_back(m_line);
-    m_line.id++;
-  }
-  pubPointWithCov.publish(ma_line);
-
-  sensor_msgs::PointCloud2 laserCloudFullRes3;
-  pcl::toROSMsg(*effect_cloud_world, laserCloudFullRes3);
-  laserCloudFullRes3.header.stamp =
-      ros::Time::now(); //.fromSec(last_timestamp_lidar);
-  laserCloudFullRes3.header.frame_id = "camera_init";
-  pubLaserCloudEffect.publish(laserCloudFullRes3);
-}
-
-void publish_no_effect(const ros::Publisher &pubLaserCloudNoEffect)
-{
-  sensor_msgs::PointCloud2 laserCloudFullRes3;
-  pcl::toROSMsg(*laserCloudNoeffect, laserCloudFullRes3);
-  laserCloudFullRes3.header.stamp =
-      ros::Time::now(); //.fromSec(last_timestamp_lidar);
-  laserCloudFullRes3.header.frame_id = "camera_init";
-  pubLaserCloudNoEffect.publish(laserCloudFullRes3);
-}
-
 void publish_effect(const ros::Publisher &pubLaserCloudEffect)
 {
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr effect_cloud_world(
@@ -527,14 +426,6 @@ void publish_odometry(const ros::Publisher &pubOdomAftMapped)
   br.sendTransform(tf::StampedTransform(transform, odomAftMapped.header.stamp,
                                         "camera_init", "aft_mapped"));
   pubOdomAftMapped.publish(odomAftMapped);
-}
-
-void publish_mavros(const ros::Publisher &mavros_pose_publisher)
-{
-  msg_body_pose.header.stamp = ros::Time::now();
-  msg_body_pose.header.frame_id = "camera_odom_frame";
-  set_posestamp(msg_body_pose.pose);
-  mavros_pose_publisher.publish(msg_body_pose);
 }
 
 void publish_path(const ros::Publisher pubPath)
