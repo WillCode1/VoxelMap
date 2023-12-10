@@ -78,9 +78,6 @@ double map_update_time_mean = 0;
 
 mutex mtx_buffer;
 condition_variable sig_buffer;
-Eigen::Vector3d last_odom(0, 0, 0);
-Eigen::Matrix3d last_rot = Eigen::Matrix3d::Zero();
-double trajectory_len = 0;
 
 string map_file_path, lid_topic, imu_topic;
 int scanIdx = 0;
@@ -558,7 +555,6 @@ int main(int argc, char **argv)
   // for Plane Map
   bool init_map = false;
   std::unordered_map<VOXEL_LOC, OctoTree *> voxel_map;
-  last_rot << 1, 0, 0, 0, 1, 0, 0, 0, 1;
 
   while (status)
   {
@@ -851,14 +847,12 @@ int main(int argc, char **argv)
         }
         else
         {
-          auto &&Hsub_T = Hsub.transpose();
           H_T_H.block<6, 6>(0, 0) = Hsub_T_R_inv * Hsub;
           MD(DIM_STATE, DIM_STATE) &&K_1 = (H_T_H + (state.cov).inverse()).inverse();
           K = K_1.block<DIM_STATE, 6>(0, 0) * Hsub_T_R_inv;
           auto vec = state_propagat - state;
           solution = K * meas_vec + vec - K * Hsub * vec.block<6, 1>(0, 0);
 
-          int minRow, minCol;
           if (0) // if(V.minCoeff(&minRow, &minCol) < 1.0f)
           {
             VD(6) V = H_T_H.block<6, 6>(0, 0).eigenvalues().real();
@@ -903,10 +897,8 @@ int main(int argc, char **argv)
 
             geoQuat = tf::createQuaternionMsgFromRollPitchYaw(euler_cur(0), euler_cur(1), euler_cur(2));
 
-            VD(DIM_STATE)
-            K_sum = K.rowwise().sum();
-            VD(DIM_STATE)
-            P_diag = state.cov.diagonal();
+            VD(DIM_STATE) K_sum = K.rowwise().sum();
+            VD(DIM_STATE) P_diag = state.cov.diagonal();
           }
           EKF_stop_flg = true;
         }
