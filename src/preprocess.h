@@ -13,10 +13,14 @@ typedef pcl::PointCloud<PointType> PointCloudXYZI;
 enum LID_TYPE { AVIA = 1, VELO16, L515, OUSTER64 }; //{1, 2, 3}
 
 namespace velodyne_ros {
+// #define VEL_TIMESTAMP_TYPE float
+#define VEL_TIMESTAMP_TYPE double
+// #define VEL_TIMESTAMP_FIELD time
+#define VEL_TIMESTAMP_FIELD timestamp
 struct EIGEN_ALIGN16 Point {
   PCL_ADD_POINT4D;
   float intensity;
-  float time;
+  VEL_TIMESTAMP_TYPE VEL_TIMESTAMP_FIELD;
   uint16_t ring;
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 };
@@ -26,7 +30,7 @@ POINT_CLOUD_REGISTER_POINT_STRUCT(velodyne_ros::Point,
     (float, y, y)
     (float, z, z)
     (float, intensity, intensity)
-    (float, time, time)
+    (VEL_TIMESTAMP_TYPE, VEL_TIMESTAMP_FIELD, VEL_TIMESTAMP_FIELD)
     (std::uint16_t, ring, ring)
 )
 

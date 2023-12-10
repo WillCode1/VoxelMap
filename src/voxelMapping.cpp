@@ -339,17 +339,14 @@ bool sync_packages(MeasureGroup &meas)
   return true;
 }
 
-void publish_frame_world(const ros::Publisher &pubLaserCloudFullRes,
-                         const int point_skip)
+void publish_frame_world(const ros::Publisher &pubLaserCloudFullRes, const int point_skip)
 {
-  PointCloudXYZI::Ptr laserCloudFullRes(dense_map_en ? feats_undistort
-                                                     : feats_down_body);
+  PointCloudXYZI::Ptr laserCloudFullRes(dense_map_en ? feats_undistort : feats_down_body);
   int size = laserCloudFullRes->points.size();
   PointCloudXYZI::Ptr laserCloudWorld(new PointCloudXYZI(size, 1));
   for (int i = 0; i < size; i++)
   {
-    RGBpointBodyToWorld(&laserCloudFullRes->points[i],
-                        &laserCloudWorld->points[i]);
+    RGBpointBodyToWorld(&laserCloudFullRes->points[i], &laserCloudWorld->points[i]);
   }
   PointCloudXYZI::Ptr laserCloudWorldPub(new PointCloudXYZI);
   for (int i = 0; i < size; i += point_skip)
@@ -358,8 +355,7 @@ void publish_frame_world(const ros::Publisher &pubLaserCloudFullRes,
   }
   sensor_msgs::PointCloud2 laserCloudmsg;
   pcl::toROSMsg(*laserCloudWorldPub, laserCloudmsg);
-  laserCloudmsg.header.stamp =
-      ros::Time::now(); //.fromSec(last_timestamp_lidar);
+  laserCloudmsg.header.stamp = ros::Time::now(); //.fromSec(last_timestamp_lidar);
   laserCloudmsg.header.frame_id = "camera_init";
   pubLaserCloudFullRes.publish(laserCloudmsg);
 }
@@ -410,21 +406,18 @@ void publish_odometry(const ros::Publisher &pubOdomAftMapped)
 {
   odomAftMapped.header.frame_id = "camera_init";
   odomAftMapped.child_frame_id = "aft_mapped";
-  odomAftMapped.header.stamp =
-      ros::Time::now(); // ros::Time().fromSec(last_timestamp_lidar);
+  odomAftMapped.header.stamp = ros::Time::now(); // ros::Time().fromSec(last_timestamp_lidar);
   set_posestamp(odomAftMapped.pose.pose);
   static tf::TransformBroadcaster br;
   tf::Transform transform;
   tf::Quaternion q;
-  transform.setOrigin(
-      tf::Vector3(state.pos_end(0), state.pos_end(1), state.pos_end(2)));
+  transform.setOrigin(tf::Vector3(state.pos_end(0), state.pos_end(1), state.pos_end(2)));
   q.setW(geoQuat.w);
   q.setX(geoQuat.x);
   q.setY(geoQuat.y);
   q.setZ(geoQuat.z);
   transform.setRotation(q);
-  br.sendTransform(tf::StampedTransform(transform, odomAftMapped.header.stamp,
-                                        "camera_init", "aft_mapped"));
+  br.sendTransform(tf::StampedTransform(transform, odomAftMapped.header.stamp, "camera_init", "aft_mapped"));
   pubOdomAftMapped.publish(odomAftMapped);
 }
 
