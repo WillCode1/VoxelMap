@@ -935,8 +935,7 @@ void BuildResidualListNormal(const unordered_map<VOXEL_LOC, OctoTree *> &voxel_m
         {
           near_position.x = near_position.x + 1;
         }
-        else if (loc_xyz[0] < (current_octo->voxel_center_[0] -
-                               current_octo->quater_length_))
+        else if (loc_xyz[0] < (current_octo->voxel_center_[0] - current_octo->quater_length_))
         {
           near_position.x = near_position.x - 1;
         }
@@ -1095,8 +1094,7 @@ void pubVoxelMap(const std::unordered_map<VOXEL_LOC, OctoTree *> &voxel_map,
   loop.sleep();
 }
 
-void pubPlaneMap(const std::unordered_map<VOXEL_LOC, OctoTree *> &feat_map,
-                 const ros::Publisher &plane_map_pub)
+void pubPlaneMap(const std::unordered_map<VOXEL_LOC, OctoTree *> &feat_map, const ros::Publisher &plane_map_pub)
 {
   OctoTree *current_octo = nullptr;
 
